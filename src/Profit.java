@@ -1,6 +1,7 @@
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.math.BigInteger;
 
 public class Profit {
 
@@ -14,10 +15,17 @@ public class Profit {
 
         String costs = in.nextLine();
 
+//        BigInteger a = new BigInteger(costs);
+//
+//        System.out.println(a);
+//        System.exit(0);
+
         if (checkOptionalFunction(costs, in, args)) {
 
             return;
         }
+
+//        BigInteger[] costsArray = getCostsArray(costs, in, args);
 
         long[] costsArray = getCostsArray(costs, in, args);
 
@@ -100,6 +108,16 @@ public class Profit {
             }
 
             long[] newAmountsArray = getNewAmountsArray(costsArray, positionsArray, amountsArray);
+
+            if (newAmountsArray == null) {
+
+                if (checkInputError(in, args, "Не указаны все цены для позиций")) {
+
+                    return;
+                }
+
+                return;
+            }
 
             Boolean checkAmountsArray = checkNewAmounts(costsArray, positionsArray, amountsArray, newAmountsArray);
 
@@ -202,6 +220,10 @@ public class Profit {
     }
 
     private static long[] getNewAmountsArray(long[] costsArray, Set<Integer> positionsArray, long[] amountsArray) {
+
+        if (amountsArray.length < positionsArray.size()) {
+            return null;
+        }
 
         long[] newAmountsArray = new long[costsArray.length];
 
@@ -330,7 +352,7 @@ public class Profit {
 
             List<String> listNumStr = getListString(str);
 
-            Set<Integer> setInt = new HashSet<>();
+            Set<Integer> setInt = new HashSet<Integer>();
 
             for (String numStr : listNumStr) {
 
