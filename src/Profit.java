@@ -1,3 +1,5 @@
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -7,368 +9,456 @@ public class Profit {
 
     public static void main(String[] args) {
 
-        Scanner in = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in);
 
         System.out.println("Для справки введите \"h\" или");
-
         System.out.println("Введите стоимость предмета или предметов");
 
-        String costs = in.nextLine();
+        String costs = getLine(scanner);
 
-//        BigInteger a = new BigInteger(costs);
-//
-//        System.out.println(a);
-//        System.exit(0);
-
-        if (checkOptionalFunction(costs, in, args)) {
-
-            return;
-        }
-
-//        BigInteger[] costsArray = getCostsArray(costs, in, args);
-
-        long[] costsArray = getCostsArray(costs, in, args);
-
-        if (costsArray == null) {
-
-            return;
-        }
+        List<BigInteger> costsList = getCostsList(costs);
 
         System.out.println("Если сумма продажи предмета(ов) отличается от стоимости введите \"+\"");
-
         System.out.println("Если нет введите \"-\"");
 
-        String text = in.nextLine();
+        String res = getLine(scanner);
 
-        if (checkOptionalFunction(text, in, args)) {
-
-            return;
+        if (!checkResponse(res)) {
+            checkInputError("Ошибка ввода");
         }
 
-        if (!text.equals("+") && !text.equals("-")) {
-
-            if (checkInputError(in, args, "Ошибка ввода")) {
-
-                return;
-            }
-        }
-
-        if (text.equals("+")) {
+        if (res.equals("+")) {
 
             System.out.println("Укажите позицию(и)");
 
-            String positions = in.nextLine();
+            String positions = getLine(scanner);
 
-            if (checkOptionalFunction(positions, in, args)) {
+            Set<BigInteger> setPositions = getSetPositions(positions);
 
-                return;
+            checkNonexistentPositions(setPositions, costsList);
+
+            System.out.println(getMessageForPositions(setPositions) + getStrPositions(setPositions));
+
+            String amounts = getLine(scanner);
+
+            List<BigInteger> amountsList = getAmountsList(amounts, setPositions, costsList);
+
+            checkAmounts(amountsList, setPositions, costsList);
+
+            String response = getResponse();
+
+            if (!checkResponse(response)) {
+                checkInputError("Ошибка ввода");
             }
 
-            Set<Integer> positionsArray = getPositionsArray(positions, in, args);
+            calculationOfProfit(costsList, amountsList, setPositions, response.equals("+"));
 
-            if (positionsArray == null) {
-
-                return;
-            }
-
-            Boolean check = checkPositions(costsArray, positionsArray);
-
-            if (check == null) {
-
-                if (checkInputError(in, args, "Количество позиций превышает количество товаров")) {
-
-                    return;
-                }
-
-                return;
-            }
-
-            if (!check) {
-
-                if (checkInputError(in, args, "Позиция не найдена")) {
-
-                    return;
-                }
-            }
-
-            System.out.println("Укажите сумму(ы)");
-
-            String amounts = in.nextLine();
-
-            if (checkOptionalFunction(amounts, in, args)) {
-
-                return;
-            }
-
-            long[] amountsArray = getArrayNumbers(amounts, in, args);
-
-            if (amountsArray == null) {
-
-                return;
-            }
-
-            long[] newAmountsArray = getNewAmountsArray(costsArray, positionsArray, amountsArray);
-
-            if (newAmountsArray == null) {
-
-                if (checkInputError(in, args, "Не указаны все цены для позиций")) {
-
-                    return;
-                }
-
-                return;
-            }
-
-            Boolean checkAmountsArray = checkNewAmounts(costsArray, positionsArray, amountsArray, newAmountsArray);
-
-            if (checkAmountsArray == null) {
-
-                if (checkInputError(in, args, "Количество сумм превышает количество позиций")) {
-
-                    return;
-                }
-
-                return;
-            }
-
-            if (!checkAmountsArray) {
-
-                if (checkInputError(in, args, "Сумма продажи не может быть меньше стоимости предмета")) {
-
-                    return;
-                }
-            }
-
-            String response = getResponse(in, args);
-
-            if (response == null) {
-
-                return;
-            }
-
-            calculationOfProfit(costsArray, newAmountsArray, positionsArray, response.equals("+"));
-
-            checkInputError(in, args, null);
+            checkInputError(null);
 
         } else {
 
-            String response = getResponse(in, args);
+            String response = getResponse();
 
-            if (response == null) {
-
-                return;
+            if (!checkResponse(response)) {
+                checkInputError("Ошибка ввода");
             }
 
-            calculationOfProfit(costsArray, response.equals("+"));
+            calculationOfProfit(costsList, response.equals("+"));
 
-            checkInputError(in, args, null);
+            checkInputError(null);
         }
     }
 
-    private static void calculationOfProfit(long[] costsArray, long[] newAmountsArray, Set<Integer> positionsArray, boolean resp) {
+    /**
+     * Метод для получения введенной строки
+     *
+     * @param scanner - сканнер для считывания данных
+     * @return - введенную строку
+     */
 
-        long result = 0;
+    private static String getLine(Scanner scanner) {
 
-        long bonus = 0;
+        String line = scanner.nextLine();
 
-        for (int i = 0; i < costsArray.length; i++) {
+        checkingAdditionalFunctions(line);
 
-            long cos = costsArray[i];
+        return line;
+    }
 
-            for (int pos : positionsArray) {
+    /**
+     * Метод для расчета прибыли если стоимость предмета отличается от суммы продажи
+     *
+     * @param costsList    - список стоимостей предметов
+     * @param amountsList  - список сумм продажи
+     * @param setPositions - позиции предметов
+     * @param resp         - введенный ответ пользователя
+     */
 
-                if (i == pos) {
+    private static void calculationOfProfit(List<BigInteger> costsList, List<BigInteger> amountsList, Set<BigInteger> setPositions, boolean resp) {
 
-                    long amount = newAmountsArray[i];
+        BigInteger result = BigInteger.valueOf(0);
+        BigInteger bonus = BigInteger.valueOf(0);
 
-                    long res = amount - cos;
+        for (int i = 0; i < costsList.size(); i++) {
 
-                    bonus = res / 100 * 20;
+            BigInteger cost = costsList.get(i);
+
+            for (BigInteger pos : setPositions) {
+
+                if (BigInteger.valueOf(i).equals(pos)) {
+
+                    BigInteger amount = amountsList.get(i);
+
+                    BigInteger res = amount.subtract(cost);
+
+                    bonus = res.divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(20));
                 }
             }
 
-            long sum = (cos + bonus) / 100 * 70;
-
-            result += sum;
+            BigInteger sum = cost.add(bonus).divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(70));
+            result = result.add(sum);
         }
 
-        if (resp) {
-
-            result += result / 100 * 30;
-        }
+        result = getResult(resp, result);
 
         System.out.println("Ваша прибыль = " + result);
     }
 
-    private static void calculationOfProfit(long[] costsArray, boolean resp) {
+    /**
+     * Метод для расчета прибыли если стоимость предмета не отличается от суммы продажи
+     *
+     * @param costsList - список стоимостей предметов
+     * @param resp      - введенный ответ пользователя
+     */
 
-        long result = 0;
+    private static void calculationOfProfit(List<BigInteger> costsList, boolean resp) {
 
-        for (long cos : costsArray) {
+        BigInteger result = BigInteger.valueOf(0);
 
-            long sum = cos / 100 * 70;
+        for (BigInteger cost : costsList) {
 
-            result += sum;
+            BigInteger sum = cost.divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(70));
+            result = result.add(sum);
         }
 
-        if (resp) {
-
-            result += result / 100 * 30;
-        }
+        result = getResult(resp, result);
 
         System.out.println("Ваша прибыль = " + result);
     }
 
-    private static long[] getNewAmountsArray(long[] costsArray, Set<Integer> positionsArray, long[] amountsArray) {
+    /**
+     * Метод для получения результата подсчета прибыли
+     *
+     * @param resp   - ответ пользователя
+     * @param result - результат расчета
+     * @return - результат расчета прибыли
+     */
 
-        if (amountsArray.length < positionsArray.size()) {
-            return null;
+    private static BigInteger getResult(boolean resp, BigInteger result) {
+
+        if (resp) {
+            result = result.add(result.divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(30)));
         }
 
-        long[] newAmountsArray = new long[costsArray.length];
+        return result;
+    }
 
-        int index = 0;
+    /**
+     * Метод для получения списка сумм продажи предметов
+     *
+     * @param amounts      - суммы указанные пользователем
+     * @param setPositions - список позиций
+     * @return - список сумм продажи предметов
+     */
 
-        for (int pos : positionsArray) {
+    private static List<BigInteger> getAmountsList(String amounts, Set<BigInteger> setPositions, List<BigInteger> costsList) {
 
-            for (int i = 0; i < newAmountsArray.length; i++) {
+        if (!checkByPattern(amounts)) {
+            checkInputError("Строка не число");
+        }
 
-                if (pos == i) {
+        List<String> listStrNum = getListString(amounts);
 
-                    newAmountsArray[i] = amountsArray[index];
+        checkQuantitiesAmounts(listStrNum, setPositions);
 
-                    index++;
-                }
+        List<BigInteger> amountsList = new ArrayList<>(costsList);
+        List<BigInteger> positionsList = new ArrayList<>(setPositions);
+
+        for (int i = 0; i < amountsList.size(); i++) {
+
+            amountsList.set(positionsList.get(i).intValue(), new BigInteger(listStrNum.get(i)));
+
+            if (i == positionsList.size() - 1) {
+                break;
             }
         }
 
-        return newAmountsArray;
+        return amountsList;
     }
 
-    private static Boolean checkPositions(long[] costsArray, Set<Integer> positionsArray) {
+    /**
+     * Метод для проверки несуществующих позиций
+     *
+     * @param setPositions - введенные позиции
+     * @param costsList    - список стоимостей предметов
+     */
 
-        if (positionsArray.size() > costsArray.length) {
+    private static void checkNonexistentPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
 
-            return null;
+        Set<BigInteger> setNonexistentPositions = getNonexistentPositions(setPositions, costsList);
+
+        if (setNonexistentPositions.size() == 0) {
+            return;
         }
 
-        boolean check = false;
+        List<BigInteger> listNonexistentPositions = new ArrayList<>(setNonexistentPositions);
 
-        for (long pos : positionsArray) {
+        StringBuilder strNonexistentPositions = new StringBuilder();
 
-            for (int i = 0; i < costsArray.length; i++) {
+        String delimiter;
 
-                if (pos != i) {
+        for (BigInteger nonexistentPosition : listNonexistentPositions) {
 
-                    check = false;
+            delimiter = getDelimiter(listNonexistentPositions, nonexistentPosition);
 
-                } else {
+            strNonexistentPositions.append(nonexistentPosition).append(delimiter);
+        }
 
-                    if (!check) {
+        checkInputError(getMessageForNonexistentPositions(listNonexistentPositions, strNonexistentPositions));
+    }
 
-                        check = true;
-                    }
+    /**
+     * Метод для получения сообщения для несуществующих позиций
+     *
+     * @param listNonexistentPositions - список несуществующих позиций
+     * @param strNonexistentPositions - строка несуществующих позиций
+     * @return - сообщение для несуществующих позиций
+     */
 
+    private static String getMessageForNonexistentPositions(List<BigInteger> listNonexistentPositions, StringBuilder strNonexistentPositions) {
+
+        String message;
+
+        if (listNonexistentPositions.size() > 1) {
+            message = "Позиции " + strNonexistentPositions.toString() + " не найдены";
+        } else {
+            message = "Позиция " + strNonexistentPositions.toString() + " не найдена";
+        }
+
+        return message;
+    }
+
+    /**
+     * Метод для получения разделителя строки
+     *
+     * @param positions - позиции
+     * @param position  - позиция
+     * @return - разделитель
+     */
+
+    private static String getDelimiter(List<BigInteger> positions, BigInteger position) {
+
+        if (positions.size() == 1 || position.equals(positions.get(positions.size() - 1))) {
+            return "";
+        }
+
+        return ", ";
+    }
+
+    /**
+     * Метод для получения несуществующих позиций
+     *
+     * @param setPositions - введенные позиции
+     * @param costsList    - список стоимостей предметов
+     * @return - несуществующие позиции
+     */
+
+    private static Set<BigInteger> getNonexistentPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
+
+        checkQuantitiesPositions(setPositions, costsList);
+
+        Set<BigInteger> setNonexistentPositions = new HashSet<>();
+
+        for (BigInteger position : setPositions) {
+
+            boolean check = false;
+
+            for (int i = 0; i < costsList.size(); i++) {
+
+                if (position.equals(BigInteger.valueOf(i))) {
+                    check = true;
                     break;
                 }
             }
-        }
 
-        return check;
-    }
-
-    private static Boolean checkNewAmounts(long[] costsArray, Set<Integer> positionsArray, long[] amountsArray, long[] newAmountsArray) {
-
-        if (amountsArray.length > positionsArray.size()) {
-
-            return null;
-        }
-
-        for (int pos : positionsArray) {
-
-            long cos = costsArray[pos];
-
-            long amount = newAmountsArray[pos];
-
-            if (amount < cos) {
-
-                return false;
+            if (!check) {
+                setNonexistentPositions.add(position);
             }
         }
 
-        return true;
+        return setNonexistentPositions;
     }
 
-    private static long[] getCostsArray(String costs, Scanner in, String[] args) {
+    /**
+     * Метод для проверки количества введенных позиций
+     *
+     * @param setPositions - введенные позиции
+     * @param costsList    - список стоимостей предметов
+     */
 
-        long[] costsArray = getArrayNumbers(costs, in, args);
-
-        if (costsArray == null) {
-
-            return null;
+    private static void checkQuantitiesPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
+        if (setPositions.size() > costsList.size()) {
+            checkInputError("Количество позиций превышает количество предметов");
         }
-
-        for (int i = 0; i < costsArray.length; i++) {
-
-            System.out.println("Позиция " + i + " : " + costsArray[i]);
-        }
-
-        return costsArray;
     }
 
-    private static long[] getArrayNumbers(String str, Scanner in, String[] args) {
+    /**
+     * Метод для получения строки с позициями
+     *
+     * @param setPositions - введенные позиции
+     * @return - строку с позициями
+     */
+
+    private static String getStrPositions(Set<BigInteger> setPositions) {
+
+        List<BigInteger> listPositions = new ArrayList<>(setPositions);
+
+        StringBuilder strPositions = new StringBuilder();
+
+        String delimiter;
+
+        for (BigInteger position : setPositions) {
+
+            delimiter = getDelimiter(listPositions, position);
+
+            strPositions.append(position).append(delimiter);
+        }
+
+        return strPositions.toString();
+    }
+
+    /**
+     * Метод для проверки сумм из указанных позиций
+     *
+     * @param amountsList  - список сумм указанных пользователем
+     * @param setPositions - указанные позиции
+     * @param costsList    - список стоимостей предметов
+     */
+
+    private static void checkAmounts(List<BigInteger> amountsList, Set<BigInteger> setPositions, List<BigInteger> costsList) {
+
+        for (int i = 0; i < setPositions.size(); i++) {
+
+            BigInteger amount = amountsList.get(i);
+            BigInteger cost = costsList.get(i);
+
+            if (amount.compareTo(cost) < 0) {
+                checkInputError("Сумма продажи не может быть меньше стоимости предмета");
+            }
+        }
+    }
+
+    /**
+     * Метод для проверки количества введенных сумм
+     *
+     * @param listStrNum   - список сумм
+     * @param setPositions - указанные позиции
+     */
+
+    private static void checkQuantitiesAmounts(List<String> listStrNum, Set<BigInteger> setPositions) {
+
+        if (listStrNum.size() > setPositions.size()) {
+            checkInputError("Количество сумм превышает количество позиций");
+        }
+
+        if (listStrNum.size() < setPositions.size()) {
+            checkInputError("Не указаны все цены для позиций");
+        }
+    }
+
+    /**
+     * Метод для получения списка стоимостей предметов
+     *
+     * @param str - введенная строка
+     * @return - список стоимостей предметов
+     */
+
+    private static List<BigInteger> getCostsList(String str) {
 
         if (!checkByPattern(str)) {
-
-            if (checkInputError(in, args, "Строка не число")) {
-
-                return null;
-            }
+            checkInputError("Строка не число");
         }
 
-        List<String> numStr = getListString(str);
+        List<String> listStrNum = getListString(str);
+        List<BigInteger> costsList = new ArrayList<>();
 
-        long[] numArr = new long[numStr.size()];
+        for (String numStr : listStrNum) {
 
-        for (int i = 0; i < numStr.size(); i++) {
+            BigInteger number = new BigInteger(numStr);
 
-            numArr[i] = Long.parseLong(numStr.get(i));
-
-            if (numArr[i] == 0) {
-
-                if (checkInputError(in, args, "Число должно быть больше нуля")) {
-
-                    return null;
-                }
+            if (number.equals(BigInteger.valueOf(0))) {
+                checkInputError("Число должно быть больше нуля");
             }
+
+            costsList.add(number);
         }
 
-        return numArr;
+        for (int i = 0; i < costsList.size(); i++) {
+            System.out.println("Позиция " + i + " : " + costsList.get(i));
+        }
+
+        return costsList;
     }
 
-    private static Set<Integer> getPositionsArray(String str, Scanner in, String[] args) {
+    /**
+     * Метод для получения позиций из строки
+     *
+     * @param str - введенная строка
+     * @return - список позиций из строки
+     */
 
-        if (checkByPattern(str)) {
+    private static Set<BigInteger> getSetPositions(String str) {
 
-            List<String> listNumStr = getListString(str);
-
-            Set<Integer> setInt = new HashSet<Integer>();
-
-            for (String numStr : listNumStr) {
-
-                setInt.add(Integer.parseInt(numStr));
-            }
-
-            return setInt;
+        if (!checkByPattern(str)) {
+            checkInputError("Строка не число");
         }
 
-        if (checkInputError(in, args, "Строка не число")) {
+        List<String> listNumStr = getListString(str);
+        Set<BigInteger> setBigInteger = new HashSet<>();
 
-            return null;
+        for (String numStr : listNumStr) {
+            setBigInteger.add(new BigInteger(numStr));
         }
 
-        return null;
+        return setBigInteger;
     }
+
+    /**
+     * Метод для получения сообщения для позиций
+     *
+     * @param setPositions - позиции предметов
+     * @return - сообщение для позиций
+     */
+
+    private static String getMessageForPositions(Set<BigInteger> setPositions) {
+
+        String message;
+
+        if (setPositions.size() > 1) {
+            message = "Укажите суммы для позиций ";
+        } else {
+            message = "Укажите сумму для позиции ";
+        }
+
+        return message;
+    }
+
+    /**
+     * Метод для получения чисел из введенной строки
+     *
+     * @param str - строка
+     * @return - список строк с числами
+     */
 
     private static List<String> getListString(String str) {
 
@@ -377,126 +467,178 @@ public class Profit {
         return Arrays.asList(str.trim().split(" "));
     }
 
+    /**
+     * Метод для проверки чисел в строке
+     *
+     * @param str - строка
+     * @return - результат проверки
+     */
+
     private static boolean checkByPattern(String str) {
 
         Pattern pattern = Pattern.compile("\\d+");
-
         Matcher matcher = pattern.matcher(str);
 
         return matcher.find();
     }
 
-    private static String getResponse(Scanner in, String[] args) {
+    /**
+     * Метод для получения ответа от пользователя
+     *
+     * @return - ответ от пользователя
+     */
+
+    private static String getResponse() {
 
         System.out.println("Если считать с комфортом введите " + "\"+\"");
-
         System.out.println("Если считать без комфорта введите " + "\"-\"");
 
-        String response = in.nextLine();
-
-        if (checkOptionalFunction(response, in, args)) {
-
-            return null;
-        }
-
-        if (!response.equals("+") && !response.equals("-")) {
-
-            if (checkInputError(in, args, "Ошибка ввода")) {
-
-                return null;
-            }
-        }
-
-        return response;
+        return new Scanner(System.in).nextLine();
     }
 
-    private static boolean checkGettingHelp(String str, Scanner in, String[] args) {
+    /**
+     * Метод для проверки ответа от пользователя
+     *
+     * @param response - введенный ответ от пользователя
+     * @return - результат проверки
+     */
 
-        if (getHelp(str)) {
+    private static boolean checkResponse(String response) {
 
-            String resp = in.nextLine();
-
-            if (getOptionalFunction(resp, args)) {
-
-                return true;
-
-            } else {
-
-                return checkInputError(in, args, "Ошибка ввода");
-            }
-        }
-
-        return false;
+        return response.equals("+") || response.equals("-");
     }
 
-    private static boolean getHelp(String str) {
+    /**
+     * Метод для проверки ввода помощи
+     *
+     * @param str - введенная строка
+     * @return - результат проверки
+     */
+
+    private static boolean checkInputHelp(String str) {
+
+        Scanner scanner = new Scanner(System.in);
 
         if (str.equals("h")) {
 
-            System.out.println("Программа была создана для подсчёта прибыли с аукциона в игре black desert");
-            System.out.println("В программу можно ввести только целочисленные значения не меньше нуля");
-            System.out.println("Для перезапуска программы введите \"res\"");
-            System.out.println("Для выхода из программы введите \"exit\"");
+            getHelp();
 
-            return true;
+            String resp = scanner.nextLine();
+
+            if (!checkingInputString(resp)) {
+                checkInputError("Ошибка ввода");
+            }
         }
 
         return false;
     }
 
-    private static boolean getOptionalFunction(String str, String[] args) {
+    /**
+     * Метод для получение помощи
+     */
 
-        if (str.equals("exit")) {
+    private static void getHelp() {
+        System.out.println("Программа была создана для подсчёта прибыли с аукциона в игре black desert");
+        System.out.println("В программу можно ввести только целочисленные значения не меньше нуля");
+        System.out.println("Для перезапуска программы введите \"res\"");
+        System.out.println("Для выхода из программы введите \"exit\"");
+    }
 
-            System.out.println("Goodbye");
-            return true;
-        }
+    /**
+     * Метод для проверки дополнительных функций
+     *
+     * @param str - введенная строка
+     * @return - результат проверки
+     */
+
+    private static boolean checkingInputString(String str) {
 
         if (str.equals("res")) {
 
-            main(args);
-            return true;
+            String jarName = "CalculationOfProfit.jar";
+            String batName = "RunCalculation.bat";
+
+            try {
+
+                if (!existsFile(jarName) || !existsFile(batName)) {
+                    System.exit(0);
+                }
+
+                Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", "start", new File(batName).getPath()});
+                System.exit(0);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (str.equals("exit")) {
+            System.out.println("Goodbye");
+            System.exit(0);
         }
 
         return false;
     }
 
-    private static boolean checkInputError(Scanner in, String[] args, String error) {
+    /**
+     * Метод для проверки существования файла
+     *
+     * @param fileName - имя файла
+     * @return - результат проверки
+     */
+
+    private static boolean existsFile(String fileName) {
+
+        String path = new File(fileName).getAbsolutePath();
+        File file = new File(path);
+
+        if (!file.exists()) {
+            System.out.println("in directory " + new File("").getAbsolutePath() + File.separator + " file " + fileName + " not found");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Метод для проверки ошибки ввода
+     *
+     * @param error - ошибка
+     */
+
+    private static void checkInputError(String error) {
+
+        Scanner scanner = new Scanner(System.in);
 
         boolean res = false;
 
         while (!res) {
 
             if (error != null) {
-
                 System.out.println(error);
             }
 
             System.out.println("Для перезапуска программы введите \"res\"");
             System.out.println("Для выхода из программы введите \"exit\"");
 
-            String str = in.nextLine();
+            String str = scanner.nextLine();
 
-            if (str.equals("exit")) {
-
-                System.out.println("Goodbye");
+            if (!checkingInputString(str)) {
+                error = "Ошибка ввода";
+            } else {
                 res = true;
             }
-
-            if (str.equals("res")) {
-
-                main(args);
-                res = true;
-            }
-
-            error = "Ошибка ввода";
         }
-
-        return true;
     }
 
-    private static boolean checkOptionalFunction(String str, Scanner in, String[] args) {
+    /**
+     * Метод для проверки дополнительных функций
+     *
+     * @param str - введенная строка
+     */
 
-        return checkGettingHelp(str, in, args) || getOptionalFunction(str, args);
+    private static void checkingAdditionalFunctions(String str) {
+        checkInputHelp(str);
+        checkingInputString(str);
     }
 }
