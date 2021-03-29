@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="CalculationOfProfit:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/CalculationOfProfit_jar</output-path>
-    <root id="archive" name="CalculationOfProfit.jar">
-      <element id="module-output" name="CalculationOfProfit" />
-    </root>
-  </artifact>
-</component>

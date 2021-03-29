@@ -35,9 +35,9 @@ public class Profit {
 
             Set<BigInteger> setPositions = getSetPositions(positions);
 
-            checkNonexistentPositions(setPositions, costsList);
+            checkNoExistPositions(setPositions, costsList);
 
-            System.out.println(getMessageForPositions(setPositions) + getStrPositions(setPositions));
+            System.out.println(getMessageForPositions(setPositions) + getPositions(setPositions));
 
             String amounts = getLine(scanner);
 
@@ -55,18 +55,17 @@ public class Profit {
 
             checkInputError(null);
 
-        } else {
-
-            String response = getResponse();
-
-            if (!checkResponse(response)) {
-                checkInputError("Ошибка ввода");
-            }
-
-            calculationOfProfit(costsList, response.equals("+"));
-
-            checkInputError(null);
         }
+
+        String response = getResponse();
+
+        if (!checkResponse(response)) {
+            checkInputError("Ошибка ввода");
+        }
+
+        calculationOfProfit(costsList, response.equals("+"));
+
+        checkInputError(null);
     }
 
     /**
@@ -108,7 +107,6 @@ public class Profit {
                 if (BigInteger.valueOf(i).equals(pos)) {
 
                     BigInteger amount = amountsList.get(i);
-
                     BigInteger res = amount.subtract(cost);
 
                     bonus = res.divide(BigInteger.valueOf(100)).multiply(BigInteger.valueOf(20));
@@ -203,39 +201,26 @@ public class Profit {
      * @param costsList    - список стоимостей предметов
      */
 
-    private static void checkNonexistentPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
+    private static void checkNoExistPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
 
-        Set<BigInteger> setNonexistentPositions = getNonexistentPositions(setPositions, costsList);
+        Set<BigInteger> setNoExistPositions = getNoExistPositions(setPositions, costsList);
 
-        if (setNonexistentPositions.size() == 0) {
+        if (setNoExistPositions.size() == 0) {
             return;
         }
 
-        List<BigInteger> listNonexistentPositions = new ArrayList<>(setNonexistentPositions);
-
-        StringBuilder strNonexistentPositions = new StringBuilder();
-
-        String delimiter;
-
-        for (BigInteger nonexistentPosition : listNonexistentPositions) {
-
-            delimiter = getDelimiter(listNonexistentPositions, nonexistentPosition);
-
-            strNonexistentPositions.append(nonexistentPosition).append(delimiter);
-        }
-
-        checkInputError(getMessageForNonexistentPositions(listNonexistentPositions, strNonexistentPositions));
+        checkInputError(getMessageForNoExistPositions(getPositions(setNoExistPositions), getStrPositions(setPositions)));
     }
 
     /**
      * Метод для получения сообщения для несуществующих позиций
      *
      * @param listNonexistentPositions - список несуществующих позиций
-     * @param strNonexistentPositions - строка несуществующих позиций
+     * @param strNonexistentPositions  - строка несуществующих позиций
      * @return - сообщение для несуществующих позиций
      */
 
-    private static String getMessageForNonexistentPositions(List<BigInteger> listNonexistentPositions, StringBuilder strNonexistentPositions) {
+    private static String getMessageForNoExistPositions(List<BigInteger> listNonexistentPositions, StringBuilder strNonexistentPositions) {
 
         String message;
 
@@ -273,7 +258,7 @@ public class Profit {
      * @return - несуществующие позиции
      */
 
-    private static Set<BigInteger> getNonexistentPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
+    private static Set<BigInteger> getNoExistPositions(Set<BigInteger> setPositions, List<BigInteger> costsList) {
 
         checkQuantitiesPositions(setPositions, costsList);
 
@@ -319,11 +304,11 @@ public class Profit {
      * @return - строку с позициями
      */
 
-    private static String getStrPositions(Set<BigInteger> setPositions) {
+    private static StringBuilder getStrPositions(Set<BigInteger> setPositions) {
 
-        List<BigInteger> listPositions = new ArrayList<>(setPositions);
+        List<BigInteger> listPositions = getPositions(setPositions);
 
-        StringBuilder strPositions = new StringBuilder();
+        StringBuilder positions = new StringBuilder();
 
         String delimiter;
 
@@ -331,10 +316,22 @@ public class Profit {
 
             delimiter = getDelimiter(listPositions, position);
 
-            strPositions.append(position).append(delimiter);
+            positions.append(position).append(delimiter);
         }
 
-        return strPositions.toString();
+        return positions;
+    }
+
+    /**
+     * Метод для получения списка позиций
+     *
+     * @param setPositions - введенные позиции
+     * @return - список с позициями
+     */
+
+    private static List<BigInteger> getPositions(Set<BigInteger> setPositions) {
+
+        return new ArrayList<>(setPositions);
     }
 
     /**
@@ -512,10 +509,9 @@ public class Profit {
      * Метод для проверки ввода помощи
      *
      * @param str - введенная строка
-     * @return - результат проверки
      */
 
-    private static boolean checkInputHelp(String str) {
+    private static void checkInputHelp(String str) {
 
         Scanner scanner = new Scanner(System.in);
 
@@ -529,8 +525,6 @@ public class Profit {
                 checkInputError("Ошибка ввода");
             }
         }
-
-        return false;
     }
 
     /**
